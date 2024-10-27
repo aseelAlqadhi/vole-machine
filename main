@@ -6,7 +6,7 @@
 using namespace std;
 class Memory{
 public:
-    string mem[265]={};
+    string mem[256]={};
     void setcell(int address ,string value ){
         if (address <0|| address >=256){
             cout<<"memory address is out of range";
@@ -20,7 +20,7 @@ public:
 
 };
 class Register{
-    int reg;
+    int reg[16];
     Register():reg(0){
     }
     void setter(int reg){
@@ -30,7 +30,7 @@ class Register{
         return reg;
     }
     void set_val_to_mem(Memory &m,int address){
-        if(address>0&&address<265){
+        if(address>0&&address<256){
             m.setcell(address ,to_string(reg));
         }
     }
