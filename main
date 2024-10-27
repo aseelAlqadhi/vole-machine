@@ -1,1 +1,37 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <cmath>
+#include <string>
+using namespace std;
+class Memory{
+public:
+    string mem[265]={};
+    void setcell(int address ,string value ){
+        if (address <0|| address >=256){
+            cout<<"memory address is out of range";
+            return ;
+        }
+        mem[address]=value;
+    }
+    string getcell(int address){
+        return mem[address];
+    }
 
+};
+class Register{
+    int reg;
+    Register():reg(0){
+    }
+    void setter(int reg){
+        this->reg =reg ;
+    }
+    int getter(){
+        return reg;
+    }
+    void set_val_to_mem(Memory &m,int address){
+        if(address>0&&address<265){
+            m.setcell(address ,to_string(reg));
+        }
+    }
+};
