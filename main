@@ -1,37 +1,65 @@
 #include <iostream>
-#include <fstream>
+#include <regex>
 #include <sstream>
 #include <cmath>
 #include <string>
 using namespace std;
 class Memory{
 public:
-    string mem[256]={};
+    string mem[265]={};
     void setcell(int address ,string value ){
         if (address <0|| address >=256){
             cout<<"memory address is out of range";
-            return ;
-        }
+            return ;}
         mem[address]=value;
     }
     string getcell(int address){
-        return mem[address];
-    }
-
+        return mem[address];}
 };
 class Register{
-    int reg[16];
+public:
+    int reg;
     Register():reg(0){
     }
-    void setter(int reg){
+    void setter(int id1,int id2 ){
         this->reg =reg ;
     }
-    int getter(){
+    int getter(int idx){
         return reg;
     }
     void set_val_to_mem(Memory &m,int address){
-        if(address>0&&address<256){
+        if(address>0&&address<265){
             m.setcell(address ,to_string(reg));
         }
     }
+};
+class ALU:public Register{
+public:
+    Register r;
+    string hex_to_dec( string &s) {
+        int  decimal =stoi(s, nullptr,16);
+        string strg =to_string(decimal);
+        return strg;
+    }
+    string dec_to_hex(string &s){
+        int dec = stoi(s);
+        stringstream sstring;
+        sstring<<hex<<dec;
+        string s_hex=sstring.str();
+        return s_hex;
+    }
+    bool valid(string &s){
+        regex regx("^(0[xX])?[0-9a-fA-F]+$");;
+        if(regex_match(s,regx)){
+            return true;
+        }
+        else {
+            cout<<"Invalid"<<endl;
+            return false;
+        }
+    }
+    void add(int idx1, int idx2, int idx3, Register &reg) {
+        reg.setter(idx3, reg.getter(idx1) + reg.getter(idx2));
+    }
+
 };
