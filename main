@@ -1,3 +1,7 @@
+//
+// Created by Aseel Mohammed alqadhi on 04/11/2024.
+//
+
 #ifndef MACHINE_H
 #define MACHINE_H
 
@@ -103,4 +107,3 @@ public:
 };
 
 #endif // MACHINE_H
-
