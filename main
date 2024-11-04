@@ -1,3 +1,4 @@
+#include "MACHINE_H.h"
 int main() {
     Machine machine;
     string filePath;
