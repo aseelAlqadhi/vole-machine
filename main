@@ -1,65 +1,106 @@
+#ifndef MACHINE_H
+#define MACHINE_H
+
 #include <iostream>
-#include <regex>
-#include <sstream>
-#include <cmath>
+#include <vector>
+#include <fstream>
 #include <string>
+#include <sstream>
+#include <iomanip>
+#include <cmath>
+#include <algorithm>
+#include <regex>
+
 using namespace std;
-class Memory{
+
+class Memory {
 public:
-    string mem[265]={};
-    void setcell(int address ,string value ){
-        if (address <0|| address >=256){
-            cout<<"memory address is out of range";
-            return ;}
-        mem[address]=value;
-    }
-    string getcell(int address){
-        return mem[address];}
+    string mem[256]{"00"};
+    void setcell(int address, string value);
+    string getcell(int address) const;
 };
-class Register{
+
+class Register {
 public:
     int reg;
-    Register():reg(0){
-    }
-    void setter(int id1,int id2 ){
-        this->reg =reg ;
-    }
-    int getter(int idx){
-        return reg;
-    }
-    void set_val_to_mem(Memory &m,int address){
-        if(address>0&&address<265){
-            m.setcell(address ,to_string(reg));
-        }
-    }
+    Register();
+    void setter(int id1, int id2);
+    int getter(int idx) const;
+    void set_val_to_mem(Memory &m, int address);
 };
-class ALU:public Register{
+
+class ALU : public Register {
 public:
     Register r;
-    string hex_to_dec( string &s) {
-        int  decimal =stoi(s, nullptr,16);
-        string strg =to_string(decimal);
-        return strg;
-    }
-    string dec_to_hex(string &s){
-        int dec = stoi(s);
-        stringstream sstring;
-        sstring<<hex<<dec;
-        string s_hex=sstring.str();
-        return s_hex;
-    }
-    bool valid(string &s){
-        regex regx("^(0[xX])?[0-9a-fA-F]+$");;
-        if(regex_match(s,regx)){
-            return true;
-        }
-        else {
-            cout<<"Invalid"<<endl;
-            return false;
-        }
-    }
-    void add(int idx1, int idx2, int idx3, Register &reg) {
-        reg.setter(idx3, reg.getter(idx1) + reg.getter(idx2));
-    }
-
+    string hex_to_dec(string &s);
+    string dec_to_hex(string &s);
+    string dec_to_hex(float val);
+    bool valid(string &s);
+    void add(int idx1, int idx2, int idx3, Register &reg);
+    void add_floats(int idx1, int idx2, int idx3, Register &reg);
+    string float_to_hex(int idx1, int idx2, int idx3, Register &reg);
 };
+
+class Screen {
+public:
+    void displayOutput(const string &output);
+};
+
+class CU {
+public:
+    void loadFromMemory(int idxReg, int idxMem, Register &reg, Memory &memory);
+    void loadImmediate(int idxReg, int val, Register &reg);
+    void store(int idxReg, int idxMem, Register &reg, Memory &memory);
+    void move(int idxReg1, int idxReg2, Register &reg);
+    void jumpIfEqual(int idxReg, int address, Register &reg, int &programCounter);
+    void halt();
+    vector<int> decode(const string &instr);
+};
+
+class CPU {
+private:
+    Register reg;
+    ALU alu;
+    CU cu;
+    int programCounter;
+    string instructionRegister;
+
+public:
+    CPU();
+    void fetchNextInstruction(Memory &memory);
+    bool executeInstruction(class Machine &machine);
+    void displayState() const;
+    Register &getRegister();
+    int getProgramCounter() const;
+    void setProgramCounter(int value);
+};
+
+class Machine {
+private:
+    CPU processor;
+    Memory memory;
+    Screen screen;
+
+public:
+    Machine();
+    void loadProgramFile(const string &filePath);
+    void outputState() const;
+    void startSimulation();
+    Memory &getMemory();
+    CPU &getCPU();
+    Screen &getScreen();
+};
+
+class MainUI {
+private:
+    Machine &machine;
+
+public:
+    MainUI(Machine &machineRef);
+    void DisplayMenu() const;
+    string inputInstruction();
+    char inputChoice();
+};
+
+#endif // MACHINE_H
+
