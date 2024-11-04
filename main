@@ -1,65 +1,301 @@
-#include <iostream>
-#include <regex>
-#include <sstream>
-#include <cmath>
-#include <string>
-using namespace std;
-class Memory{
-public:
-    string mem[265]={};
-    void setcell(int address ,string value ){
-        if (address <0|| address >=256){
-            cout<<"memory address is out of range";
-            return ;}
-        mem[address]=value;
+#include "Machine.h"
+
+void Memory::setcell(int address, string value) {
+    if (address < 0 || address >= 256) {
+        cout << "Memory address is out of range." << endl;
+        return;
     }
-    string getcell(int address){
-        return mem[address];}
-};
-class Register{
-public:
-    int reg;
-    Register():reg(0){
+    mem[address] = value;
+}
+
+string Memory::getcell(int address) const {
+    return mem[address];
+}
+
+Register::Register() : reg(0) {}
+
+void Register::setter(int id1, int id2) {
+    this->reg = id2;
+}
+
+int Register::getter(int idx) const {
+    return reg;
+}
+
+void Register::set_val_to_mem(Memory &m, int address) {
+    if (address >= 0 && address < 256) {
+        m.setcell(address, to_string(reg));
     }
-    void setter(int id1,int id2 ){
-        this->reg =reg ;
+}
+
+// ALU definitions
+string ALU::hex_to_dec(string &s) {
+    int decimal = stoi(s, nullptr, 16);
+    return to_string(decimal);
+}
+
+string ALU::dec_to_hex(string &s) {
+    int dec = stoi(s);
+    stringstream sstring;
+    sstring << hex << dec;
+    return sstring.str();
+}
+
+string ALU::dec_to_hex(float val) {
+    stringstream sstring;
+    sstring << hex << val;
+    return sstring.str();
+}
+
+bool ALU::valid(string &s) {
+    regex regx("^(0[xX])?[0-9a-fA-F]+$");
+    if (regex_match(s, regx)) {
+        return true;
+    } else {
+        cout << "Invalid" << endl;
+        return false;
     }
-    int getter(int idx){
-        return reg;
+}
+
+void ALU::add(int idx1, int idx2, int idx3, Register &reg) {
+    reg.setter(idx3, reg.getter(idx1) + reg.getter(idx2));
+}
+
+void ALU::add_floats(int idx1, int idx2, int idx3, Register &reg) {
+    float val1 = reg.getter(idx1);
+    float val2 = reg.getter(idx2);
+    float res = val1 + val2;
+    return reg.setter(idx3, res);
+}
+
+string ALU::float_to_hex(int idx1, int idx2, int idx3, Register &reg) {
+    add_floats(idx1, idx2, idx3, reg);
+    float res = reg.getter(idx3);
+    return dec_to_hex(res);
+}
+
+// Screen definitions
+void Screen::displayOutput(const string &output) {
+    cout << "Screen Output: " << output << endl;
+}
+
+// CU definitions
+void CU::loadFromMemory(int idxReg, int idxMem, Register &reg, Memory &memory) {
+    int value = stoi(memory.getcell(idxMem), nullptr, 16);
+    reg.setter(idxReg, value);
+}
+
+void CU::loadImmediate(int idxReg, int val, Register &reg) {
+    reg.setter(idxReg, val);
+}
+
+void CU::store(int idxReg, int idxMem, Register &reg, Memory &memory) {
+    stringstream ss;
+    ss << setw(4) << setfill('0') << hex << reg.getter(idxReg);
+    memory.setcell(idxMem, ss.str());
+}
+
+void CU::move(int idxReg1, int idxReg2, Register &reg) {
+    int value = reg.getter(idxReg2);
+    reg.setter(idxReg1, value);
+}
+
+void CU::jumpIfEqual(int idxReg, int address, Register &reg, int &programCounter) {
+    if (reg.getter(idxReg) == reg.getter(0)) {
+        programCounter = address;
     }
-    void set_val_to_mem(Memory &m,int address){
-        if(address>0&&address<265){
-            m.setcell(address ,to_string(reg));
+}
+
+void CU::halt() {
+    cout << "Halting execution." << endl;
+    exit(0);
+}
+
+vector<int> CU::decode(const string &instr) {
+    vector<int> decoded;
+    for (char ch : instr) {
+        if (isxdigit(ch)) {
+            decoded.push_back(ch >= '0' && ch <= '9' ? ch - '0' : ch - 'A' + 10);
         }
     }
-};
-class ALU:public Register{
-public:
-    Register r;
-    string hex_to_dec( string &s) {
-        int  decimal =stoi(s, nullptr,16);
-        string strg =to_string(decimal);
-        return strg;
+    return decoded;
+}
+
+// CPU definitions
+CPU::CPU() : programCounter(0) {}
+
+void CPU::fetchNextInstruction(Memory &memory) {
+    if (programCounter < 256) {
+        instructionRegister = memory.getcell(programCounter++);
+        cout << "Fetched Instruction: " << instructionRegister << " at PC: " << programCounter - 1 << endl;
+    } else {
+        cerr << "Error: Program counter out of bounds." << endl;
     }
-    string dec_to_hex(string &s){
-        int dec = stoi(s);
-        stringstream sstring;
-        sstring<<hex<<dec;
-        string s_hex=sstring.str();
-        return s_hex;
-    }
-    bool valid(string &s){
-        regex regx("^(0[xX])?[0-9a-fA-F]+$");;
-        if(regex_match(s,regx)){
-            return true;
-        }
-        else {
-            cout<<"Invalid"<<endl;
-            return false;
-        }
-    }
-    void add(int idx1, int idx2, int idx3, Register &reg) {
-        reg.setter(idx3, reg.getter(idx1) + reg.getter(idx2));
+}
+
+bool CPU::executeInstruction(Machine &machine) {
+    if (instructionRegister.empty()) {
+        cerr << "Error: No instruction to execute." << endl;
+        return false;
     }
 
-};
+    auto decoded = cu.decode(instructionRegister);
+    if (!decoded.empty()) {
+        cout << "Decoded Instruction: ";
+        for (int val : decoded) {
+            cout << val << " ";
+        }
+        cout << endl;
+
+        switch (decoded[0]) {
+            case 1:
+                cu.loadFromMemory(decoded[1], (decoded[2] << 4) | decoded[3], reg, machine.getMemory());
+                break;
+            case 2:
+                cu.loadImmediate(decoded[1], (decoded[2] << 4) | decoded[3], reg);
+                break;
+            case 3:
+                cu.store(decoded[1], (decoded[2] << 4) | decoded[3], reg, machine.getMemory());
+                break;
+            case 4:
+                cu.move(decoded[1], decoded[2], reg);
+                break;
+            case 5:
+                alu.add(decoded[1], decoded[2], decoded[3], reg);
+                break;
+            case 15:
+                cu.halt();
+                break;
+            default:
+                cerr << "Error: Invalid opcode." << endl;
+                return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+// Machine definitions
+Machine::Machine() {}
+
+void Machine::loadProgramFile(const string &filePath) {
+    ifstream file(filePath);
+    if (!file) {
+        cerr << "Error: Unable to open file " << filePath << endl;
+        return;
+    }
+
+    string line;
+    int address = 0;
+    while (getline(file, line)) {
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
+        if (line.empty() || line.substr(0, 2) == "//") {
+            continue;
+        }
+
+        istringstream iss(line);
+        string instruction;
+        while (iss >> instruction) {
+            if (instruction.size() == 4 && all_of(instruction.begin(), instruction.end(), ::isxdigit)) {
+                if (address < 256) {
+                    memory.setcell(address++, instruction);
+                    cout << "Loaded instruction " << instruction << " into memory at address " << address - 1 << endl;
+                } else {
+                    cerr << "Error: Memory overflow." << endl;
+                    break;
+                }
+            } else {
+                cerr << "Error: Invalid instruction format for '" << instruction << "'" << endl;
+            }
+        }
+    }
+    processor.setProgramCounter(0);
+}
+
+void Machine::outputState() const {
+    processor.displayState();
+    cout << "Memory: ";
+    for (int i = 0; i < 16; ++i) {
+        cout << memory.getcell(i) << " ";
+    }
+    cout << endl;
+}
+
+void Machine::startSimulation() {
+    MainUI ui(*this);
+    bool running = true;
+    while (running) {
+        ui.DisplayMenu();
+        char choice = ui.inputChoice();
+        cout << "User selected choice: " << choice << endl;
+
+        switch (choice) {
+            case '1':
+                cout << "Program Counter: " << processor.getProgramCounter() << endl;
+                break;
+            case '2':
+                outputState();
+                break;
+            case '3': {
+                string instruction = ui.inputInstruction();
+                if (instruction.size() == 4 && all_of(instruction.begin(), instruction.end(), ::isxdigit)) {
+                    int address = processor.getProgramCounter();
+                    memory.setcell(address, instruction);
+                    cout << "Instruction " << instruction << " written to memory at address " << address << endl;
+                    processor.fetchNextInstruction(memory);
+                    processor.executeInstruction(*this);
+                } else {
+                    cout << "Invalid instruction format. Please enter a 4-character hexadecimal string." << endl;
+                }
+                break;
+            }
+            case '4':
+                cout << "Exiting simulation." << endl;
+                running = false;
+                break;
+            default:
+                cout << "Invalid choice. Please try again." << endl;
+        }
+    }
+}
+
+// Main UI definitions
+MainUI::MainUI(Machine &machineRef) : machine(machineRef) {}
+
+void MainUI::DisplayMenu() const {
+    cout << "\nMenu:\n"
+         << "1. Display Program Counter\n"
+         << "2. Display Memory & Register State\n"
+         << "3. Input Instruction\n"
+         << "4. Exit\n"
+         << "Enter your choice: ";
+}
+
+string MainUI::inputInstruction() {
+    cout << "Enter a 4-character instruction (hexadecimal): ";
+    string instruction;
+    cin >> instruction;
+    return instruction;
+}
+
+char MainUI::inputChoice() {
+    char choice;
+    cin >> choice;
+    return choice;
+}
+
+// Main function
+int main() {
+    Machine machine;
+    string filePath;
+
+    cout << "Enter the program file path: ";
+    getline(cin, filePath);
+
+    machine.loadProgramFile(filePath);
+    machine.startSimulation();
+
+    return 0;
+}
